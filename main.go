@@ -1,9 +1,13 @@
 package main
 
 import (
+	"context"
 	dpfm_api_caller "data-platform-api-price-master-creates-rmq-kube/DPFM_API_Caller"
 	dpfm_api_input_reader "data-platform-api-price-master-creates-rmq-kube/DPFM_API_Input_Reader"
+	dpfm_api_output_formatter "data-platform-api-price-master-creates-rmq-kube/DPFM_API_Output_Formatter"
 	"data-platform-api-price-master-creates-rmq-kube/config"
+	"data-platform-api-price-master-creates-rmq-kube/existence_conf"
+	"data-platform-api-price-master-creates-rmq-kube/sub_func_complementer"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -13,6 +17,7 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
 	l := logger.NewLogger()
 	conf := config.NewConf()
 	rmq, err := rabbitmq.NewRabbitmqClient(conf.RMQ.URL(), conf.RMQ.QueueFrom(), conf.RMQ.SessionControlQueue(), conf.RMQ.QueueToSQL(), 0)
@@ -26,7 +31,9 @@ func main() {
 	}
 	defer rmq.Stop()
 
-	caller := dpfm_api_caller.NewDPFMAPICaller(conf, rmq)
+	confirmor := existence_conf.NewExistenceConf(ctx, conf, rmq)
+	complementer := sub_func_complementer.NewSubFuncComplementer(ctx, conf, rmq)
+	caller := dpfm_api_caller.NewDPFMAPICaller(conf, rmq, confirmor, complementer)
 
 	for msg := range iter {
 		start := time.Now()
@@ -39,6 +46,14 @@ func main() {
 		l.Info("process time %v\n", time.Since(start).Milliseconds())
 	}
 }
+
+func recovery(l *logger.Logger, err *error) {
+	if e := recover(); e != nil {
+		*err = fmt.Errorf("error occurred: %w", e)
+		l.Error(err)
+		return
+	}
+}
 func getSessionID(data map[string]interface{}) string {
 	id := fmt.Sprintf("%v", data["runtime_session_id"])
 	return id
@@ -46,39 +61,41 @@ func getSessionID(data map[string]interface{}) string {
 
 func callProcess(rmq *rabbitmq.RabbitmqClient, caller *dpfm_api_caller.DPFMAPICaller, conf *config.Conf, msg rabbitmq.RabbitmqMessage) (err error) {
 	l := logger.NewLogger()
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("error occurred: %w", e)
-			l.Error(err)
-			return
-		}
-	}()
+	defer recovery(l, &err)
+
 	l.AddHeaderInfo(map[string]interface{}{"runtime_session_id": getSessionID(msg.Data())})
 	var input dpfm_api_input_reader.SDC
+	var output dpfm_api_output_formatter.SDC
 
 	err = json.Unmarshal(msg.Raw(), &input)
 	if err != nil {
 		l.Error(err)
-		input.APIProcessingResult = getBoolPtr(false)
-		input.APIProcessingError = err.Error()
+		return
+	}
+	err = json.Unmarshal(msg.Raw(), &output)
+	if err != nil {
+		l.Error(err)
 		return
 	}
 
 	accepter := getAccepter(&input)
 
-	errs := caller.AsyncPriceMasterCreates(accepter, &input, l)
+	res, errs := caller.AsyncPriceMasterCreates(accepter, &input, &output, l)
 	if len(errs) != 0 {
 		for _, err := range errs {
 			l.Error(err)
 		}
-		input.APIProcessingResult = getBoolPtr(false)
-		input.APIProcessingError = errs[0].Error()
-		rmq.Send(conf.RMQ.QueueToResponse(), input)
+		output.APIProcessingResult = getBoolPtr(false)
+		output.APIProcessingError = errs[0].Error()
+		output.Message = res
+		rmq.Send(conf.RMQ.QueueToResponse(), output)
 		return errs[0]
 	}
-	input.APIProcessingResult = getBoolPtr(true)
-	rmq.Send(conf.RMQ.QueueToResponse(), input)
-	l.JsonParseOut(input)
+	output.APIProcessingResult = getBoolPtr(true)
+	output.Message = res
+
+	l.JsonParseOut(output)
+	rmq.Send(conf.RMQ.QueueToResponse(), output)
 
 	return nil
 }

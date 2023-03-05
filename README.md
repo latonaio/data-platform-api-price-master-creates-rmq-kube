@@ -18,7 +18,7 @@ APIサービス URL: https://xxx.xxx.io/api/API_PRICE_MASTER_SRV/creates/
 ## 本レポジトリ に 含まれる API名
 data-platform-api-price-master-creates-rmq-kube には、次の API をコールするためのリソースが含まれています。  
 
-* A_PartnerFunction（価格マスタ - 価格マスタデータ）
+* A_PriceMaster（価格マスタ - 価格マスタデータ）
 
 
 ## API への 値入力条件 の 初期値

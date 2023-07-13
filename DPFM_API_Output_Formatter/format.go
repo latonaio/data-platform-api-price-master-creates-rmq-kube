@@ -1,48 +1,31 @@
 package dpfm_api_output_formatter
 
 import (
+	dpfm_api_input_reader "data-platform-api-price-master-creates-rmq-kube/DPFM_API_Input_Reader"
 	dpfm_api_processing_formatter "data-platform-api-price-master-creates-rmq-kube/DPFM_API_Processing_Formatter"
-	"data-platform-api-price-master-creates-rmq-kube/sub_func_complementer"
+	"encoding/json"
+
+	"golang.org/x/xerrors"
 )
 
-func ConvertToPriceMasterCreates(subfuncSDC *sub_func_complementer.SDC) *PriceMaster {
-	data := subfuncSDC.Message.PriceMaster
+func ConvertToPriceMasterCreates(sdc *dpfm_api_input_reader.SDC) (*PriceMaster, error) {
+	data := sdc.PriceMaster
 
-	priceMaster := &PriceMaster{
-		SupplyChainRelationshipID:  data.SupplyChainRelationshipID,
-		Buyer:                      data.Buyer,
-		Seller:                     data.Seller,
-		ConditionRecord:            data.ConditionRecord,
-		ConditionSequentialNumber:  data.ConditionSequentialNumber,
-		ConditionValidityEndDate:   data.ConditionValidityEndDate,
-		ConditionValidityStartDate: data.ConditionValidityStartDate,
-		Product:                    data.Product,
-		ConditionType:              data.ConditionType,
-		CreationDate:               data.CreationDate,
-		ConditionRateValue:         data.ConditionRateValue,
-		ConditionRateValueUnit:     data.ConditionRateValueUnit,
-		ConditionRateRatio:         data.ConditionRateRatio,
-		ConditionRateRatioUnit:     data.ConditionRateRatioUnit,
-		BaseUnit:                   data.BaseUnit,
-		ConditionIsDeleted:         data.ConditionIsDeleted,
+	priceMaster, err := TypeConverter[*PriceMaster](data)
+	if err != nil {
+		return nil, err
 	}
 
-	return priceMaster
+	return priceMaster, nil
 }
 
-func ConvertToPriceMasterUpdates(priceMasterUpdates *dpfm_api_processing_formatter.PriceMasterUpdates) *PriceMaster {
-	data := priceMasterUpdates
+func ConvertToPriceMasterUpdates(priceMasterData dpfm_api_input_reader.PriceMaster) (*PriceMaster, error) {
+	data := priceMasterData
 
-	priceMaster := &PriceMaster{
-		ConditionType:              data.ConditionType,
-		ConditionValidityEndDate:   data.ConditionValidityEndDate,
-		ConditionValidityStartDate: data.ConditionValidityStartDate,
-		ConditionRateValue:         data.ConditionRateValue,
-		ConditionRateValueUnit:     data.ConditionRateValueUnit,
-		ConditionRateRatio:         data.ConditionRateRatio,
-		ConditionRateRatioUnit:     data.ConditionRateRatioUnit,
-		ConditionIsDeleted:         data.ConditionIsDeleted,
+	priceMaster, err := TypeConverter[*PriceMaster](data)
+	if err != nil {
+		return nil, err
 	}
 
-	return priceMaster
+	return priceMaster, nil
 }

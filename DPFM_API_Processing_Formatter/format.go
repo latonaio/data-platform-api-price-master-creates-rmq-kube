@@ -8,13 +8,17 @@ func ConvertToPriceMasterUpdates(priceMaster dpfm_api_input_reader.PriceMaster) 
 	data := priceMaster
 
 	return &PriceMasterUpdates{
-		ConditionType:              data.ConditionType,
-		ConditionValidityEndDate:   data.ConditionValidityEndDate,
-		ConditionValidityStartDate: data.ConditionValidityStartDate,
-		ConditionRateValue:         data.ConditionRateValue,
-		ConditionRateValueUnit:     data.ConditionRateValueUnit,
-		ConditionRateRatio:         data.ConditionRateRatio,
-		ConditionRateRatioUnit:     data.ConditionRateRatioUnit,
-		ConditionIsDeleted:         data.ConditionIsDeleted,
+			SupplyChainRelationshipID:  data.SupplyChainRelationshipID,
+			Buyer:                      data.Buyer,
+			Seller:                     data.Seller,
+			ConditionRecord:            data.ConditionRecord,
+			ConditionSequentialNumber:  data.ConditionSequentialNumber,
+			Product:                    data.Product,
+			ConditionValidityStartDate: data.ConditionValidityStartDate,
+			ConditionValidityEndDate:   data.ConditionValidityEndDate,
+			ConditionType:              data.ConditionType,
+			ConditionRateValue:         data.ConditionRateValue,
+			ConditionRateValueUnit:     data.ConditionRateValueUnit,
+			ConditionScaleQuantity:     data.ConditionScaleQuantity,
 	}
 }
